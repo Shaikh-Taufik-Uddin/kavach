@@ -13,4 +13,4 @@
 - [x] **Phase 3:** Multi-Tenancy & Auth State (`lib/firebase/auth.ts`, `lib/firebase/auth-context.tsx`)
 - [x] **Phase 4:** Firestore Vault Layer (`lib/firebase/firestore.ts`)
 - [x] **Phase 5:** Student Submission Pipeline (`app/student/submit`)
-- [ ] **Phase 6:** HR Admin Dashboard (`app/admin/dashboard`)
+- [x] **Phase 6:** HR Admin Dashboard (`app/admin/dashboard`)
