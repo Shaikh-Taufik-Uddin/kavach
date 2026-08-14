@@ -14,3 +14,4 @@
 - [x] **Phase 4:** Firestore Vault Layer (`lib/firebase/firestore.ts`)
 - [x] **Phase 5:** Student Submission Pipeline (`app/student/submit`)
 - [x] **Phase 6:** HR Admin Dashboard (`app/admin/dashboard`)
+- [x] **Phase 7:** Landing Hub & Final Routing (`app/page.tsx`)
