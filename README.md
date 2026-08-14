@@ -11,6 +11,6 @@
 - [x] **Phase 1:** Data Contracts (`lib/types`) & Firebase Init (`lib/firebase/config.ts`)
 - [x] **Phase 2:** Zero-Knowledge Crypto Engine (`lib/crypto/webcrypto.ts`)
 - [x] **Phase 3:** Multi-Tenancy & Auth State (`lib/firebase/auth.ts`, `lib/firebase/auth-context.tsx`)
-- [ ] **Phase 4:** Firestore Vault Layer (`lib/firebase/firestore.ts`)
+- [x] **Phase 4:** Firestore Vault Layer (`lib/firebase/firestore.ts`)
 - [ ] **Phase 5:** Student Submission Pipeline (`app/student/submit`)
 - [ ] **Phase 6:** HR Admin Dashboard (`app/admin/dashboard`)
