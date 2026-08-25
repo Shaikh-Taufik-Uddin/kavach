@@ -9,6 +9,7 @@ import { ParsedLogItem } from '@/lib/types';
 import { auth } from '@/lib/firebase/config';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { saveEncryptedLog, fetchEncryptedLogs } from '@/lib/firebase/db';
+import { generatePOSHReport } from '@/lib/ai/posh-analyzer';
 
 export default function Home() {
   // Phase 1 state
@@ -30,6 +31,10 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(false);
   const [cloudLogs, setCloudLogs] = useState<{ ciphertextBase64: string, ivBase64: string }[]>([]);
   const [cloudLoading, setCloudLoading] = useState(false);
+
+  // Phase 4 state
+  const [poshReport, setPoshReport] = useState<any | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -85,6 +90,23 @@ export default function Home() {
       alert("Failed to fetch from Firebase.");
     } finally {
       setCloudLoading(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!decryptedData || decryptedData.length === 0) {
+      alert("Please decrypt some logs first.");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const report = await generatePOSHReport(decryptedData);
+      setPoshReport(report);
+    } catch (error) {
+      console.error("Report generation error:", error);
+      alert("Failed to generate report.");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -273,6 +295,23 @@ export default function Home() {
         <h2>Fetched Cloud Logs:</h2>
         <pre style={{ background: '#eee', padding: '10px', overflowX: 'auto', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
           {cloudLogs.length > 0 ? JSON.stringify(cloudLogs, null, 2) : "No cloud data fetched yet."}
+        </pre>
+      </div>
+
+      <hr style={{ margin: '40px 0' }} />
+
+      <h1>Phase 4: POSH Legal Synthesis</h1>
+      
+      <div style={{ marginTop: '20px' }}>
+        <button onClick={handleGenerateReport} disabled={isAnalyzing || !decryptedData}>
+          {isAnalyzing ? "Analyzing..." : "Generate Legal Report"}
+        </button>
+      </div>
+
+      <div style={{ marginTop: '20px' }}>
+        <h2>POSH Report:</h2>
+        <pre style={{ background: '#eee', padding: '10px', overflowX: 'auto', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+          {poshReport ? JSON.stringify(poshReport, null, 2) : "No report generated yet."}
         </pre>
       </div>
     </div>
