@@ -122,7 +122,7 @@ export default function StudentSubmitPage() {
 
   const handleApproveAndEncrypt = async () => {
     try {
-      const payload = { timeline: aiTimeline, report: aiReport };
+      const payload = { timeline: aiTimeline, report: aiReport, incidentNarrative: incidentDescription };
       const newKey = generate16CharKey();
       setDecryptionKey(newKey);
       

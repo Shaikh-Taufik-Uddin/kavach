@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { ParsedLogItem } from '../types';
 
-export const generatePOSHReport = async (decryptedLogs: ParsedLogItem[]): Promise<any> => {
+export const generatePOSHReport = async (decryptedLogs: ParsedLogItem[], narrative: string = ''): Promise<any> => {
   const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
 
   const systemInstruction = `
@@ -44,7 +44,7 @@ Important Rules:
           {
             role: 'user',
             parts: [
-              { text: "Analyze the following decrypted chat logs and generate the POSH report:\n\n" + logsString }
+              { text: `Analyze the following decrypted chat logs and generate the POSH report:\n\nAdditional Context / Incident Narrative from Victim:\n"${narrative}"\n\nLogs:\n${logsString}` }
             ]
           }
         ],

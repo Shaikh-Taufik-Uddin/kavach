@@ -117,10 +117,11 @@ export default function AdminDashboardPage() {
       );
       
       const timeline = decryptedPayload.timeline || [];
+      const narrative = decryptedPayload.incidentNarrative || '';
       setDecryptedTimeline(timeline);
       
       setIsAnalyzing(true);
-      const report = await generatePOSHReport(timeline);
+      const report = await generatePOSHReport(timeline, narrative);
       
       const finalReport = {
         ...report,
