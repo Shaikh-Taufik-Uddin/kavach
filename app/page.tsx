@@ -9,20 +9,22 @@ import { auth } from '@/lib/firebase/config';
 
 function Navbar() {
   return (
-    <nav className="w-full flex items-center justify-between px-8 py-6 max-w-[1400px] mx-auto sticky top-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10">
-      <div className="flex items-center gap-2">
-        <Shield className="w-6 h-6 text-white" />
-        <span className="font-bold text-xl tracking-widest uppercase text-white">KAVACH</span>
-      </div>
-      
-      <div className="hidden md:flex items-center gap-8 text-[13px] font-medium tracking-wide uppercase">
-        <a href="#how-it-works" className="text-white/70 hover:text-white transition-colors">How It Works</a>
-        <a href="#security" className="text-white/70 hover:text-white transition-colors">Security</a>
-        <a href="#compliance" className="text-white/70 hover:text-white transition-colors">Compliance</a>
-      </div>
+    <nav className="fixed top-0 left-0 w-full z-50 bg-gradient-to-b from-black/90 via-black/50 to-transparent pt-6 pb-12 px-6 md:px-12 pointer-events-none">
+      <div className="max-w-[1400px] mx-auto flex items-center justify-between pointer-events-auto">
+        <div className="flex items-center gap-2">
+          <Shield className="w-6 h-6 text-white" />
+          <span className="font-bold text-xl tracking-widest uppercase text-white drop-shadow-md">KAVACH</span>
+        </div>
+        
+        <div className="hidden md:flex items-center gap-8 text-[13px] font-medium tracking-wide uppercase drop-shadow-md">
+          <a href="#how-it-works" className="text-white/70 hover:text-white transition-colors">How It Works</a>
+          <a href="#security" className="text-white/70 hover:text-white transition-colors">Security</a>
+          <a href="#compliance" className="text-white/70 hover:text-white transition-colors">Compliance</a>
+        </div>
 
-      <div className="flex items-center gap-6 text-[13px] tracking-wide uppercase">
-        <a href="#" className="font-medium text-white/70 hover:text-white transition-colors hidden sm:block">Sign In</a>
+        <div className="flex items-center gap-6 text-[13px] tracking-wide uppercase drop-shadow-md">
+          <a href="#" className="font-medium text-white/70 hover:text-white transition-colors hidden sm:block">Sign In</a>
+        </div>
       </div>
     </nav>
   );
@@ -212,19 +214,19 @@ function LegalOutcomeSection() {
 
 function Footer() {
   return (
-    <footer className="py-12 px-8 border-t border-white/10 bg-black/60 backdrop-blur-md">
+    <footer className="pt-40 pb-12 px-8 bg-gradient-to-t from-black via-black/90 to-transparent mt-20">
       <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
         <div className="flex flex-col items-center md:items-start gap-4">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-white" />
-            <span className="font-bold tracking-widest uppercase text-white">KAVACH</span>
+            <span className="font-bold tracking-widest uppercase text-white drop-shadow-md">KAVACH</span>
           </div>
-          <p className="text-xs text-white/60 font-light max-w-[300px] text-center md:text-left">
+          <p className="text-xs text-white/60 font-light max-w-[300px] text-center md:text-left drop-shadow-md">
             Zero-Knowledge evidence protection for sensitive POSH compliance workflows.
           </p>
         </div>
         
-        <div className="flex items-center gap-6 text-xs tracking-widest uppercase font-medium text-white/60 flex-wrap justify-center">
+        <div className="flex items-center gap-6 text-xs tracking-widest uppercase font-medium text-white/60 flex-wrap justify-center drop-shadow-md">
           <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
           <a href="#security" className="hover:text-white transition-colors">Security</a>
           <a href="#compliance" className="hover:text-white transition-colors">Compliance</a>
