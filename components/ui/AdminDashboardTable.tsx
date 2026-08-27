@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge';
 export interface FirestoreVaultDocument {
   caseId: string;
   tenantId: string;
-  status: 'LOCKED' | 'UNDER_REVIEW' | 'RESOLVED';
+  status: 'LOCKED' | 'UNLOCKED' | 'RESOLVED';
   createdAtServerTimestamp: number;
   encryptedCiphertextBase64: string;
   initializationVectorBase64: string;
@@ -20,7 +20,7 @@ interface AdminDashboardTableProps {
   processingCaseId?: string | null;
 }
 
-type TabStatus = 'ALL' | 'LOCKED' | 'UNDER_REVIEW' | 'RESOLVED';
+type TabStatus = 'ALL' | 'LOCKED' | 'UNLOCKED' | 'RESOLVED';
 
 export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoading, processingCaseId }: AdminDashboardTableProps) {
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
@@ -32,7 +32,7 @@ export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoadin
   const getStatusConfig = (status: FirestoreVaultDocument['status']) => {
     switch (status) {
       case 'LOCKED': return { label: 'LOCKED', icon: <Lock className="w-3.5 h-3.5" />, styles: 'bg-slate-100 text-slate-600 border-slate-200' };
-      case 'UNDER_REVIEW': return { label: 'REVIEWING', icon: <Clock className="w-3.5 h-3.5" />, styles: 'bg-amber-50 text-amber-600 border-amber-200' };
+      case 'UNLOCKED': return { label: 'UNLOCKED', icon: <FileText className="w-3.5 h-3.5" />, styles: 'bg-indigo-50 text-indigo-600 border-indigo-200' };
       case 'RESOLVED': return { label: 'RESOLVED', icon: <CheckCircle className="w-3.5 h-3.5" />, styles: 'bg-emerald-50 text-emerald-600 border-emerald-200' };
     }
   };
@@ -49,7 +49,7 @@ export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoadin
           </div>
           
           <div className="flex bg-slate-100/80 p-1 rounded-lg border border-slate-200/60 shadow-inner self-start sm:self-auto overflow-x-auto">
-            {(['ALL', 'LOCKED', 'UNDER_REVIEW', 'RESOLVED'] as TabStatus[]).map((tab) => (
+            {(['ALL', 'LOCKED', 'UNLOCKED', 'RESOLVED'] as TabStatus[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -95,8 +95,8 @@ export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoadin
             <tbody className="divide-y divide-slate-100">
               {filteredCases.map((c) => {
                 const conf = getStatusConfig(c.status);
-                const date = new Date(c.createdAtServerTimestamp).toLocaleDateString(undefined, {
-                  month: 'short', day: 'numeric', year: 'numeric'
+                const date = new Date(c.createdAtServerTimestamp).toLocaleString(undefined, {
+                  month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
                 });
                 const isLocked = c.status === 'LOCKED';
 

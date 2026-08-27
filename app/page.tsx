@@ -170,7 +170,7 @@ function SecuritySection() {
   );
 }
 
-function LegalOutcomeSection() {
+function LegalOutcomeSection({ onAuthClick }: { onAuthClick: () => void }) {
   return (
     <section id="compliance" className="py-24 md:py-32 px-4 relative border-t border-white/10 bg-black/30 backdrop-blur-sm">
       <div className="max-w-[1200px] mx-auto text-center relative z-10">
@@ -199,7 +199,7 @@ function LegalOutcomeSection() {
           ))}
         </div>
 
-        <button className="bg-white text-black px-10 py-4 rounded font-bold text-sm hover:bg-gray-100 transition-colors tracking-widest uppercase mb-8">
+        <button onClick={onAuthClick} className="bg-white text-black px-10 py-4 rounded font-bold text-sm hover:bg-gray-100 transition-colors tracking-widest uppercase mb-8">
           Enter KAVACH
         </button>
         
@@ -346,7 +346,7 @@ export default function LandingPage() {
           <ProblemSection />
           <HowItWorksSection />
           <SecuritySection />
-          <LegalOutcomeSection />
+          <LegalOutcomeSection onAuthClick={() => setShowAuthOverlay(true)} />
         </main>
         <Footer />
       </div>

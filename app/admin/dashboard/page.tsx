@@ -135,6 +135,10 @@ export default function AdminDashboardPage() {
       };
       
       setReportData(finalReport);
+      
+      // Update case status locally
+      setCases(prev => prev.map(c => c.caseId === selectedCase.caseId ? { ...c, status: 'UNLOCKED' as any } : c));
+      
       setIsUnlockModalOpen(false);
       setViewState('CASE_DETAIL');
       setActiveTab('REPORT');
