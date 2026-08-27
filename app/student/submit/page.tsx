@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Shield, CheckCircle2, Cpu, Lock, Database, FileText, AlertTriangle, Copy, ArrowRight, Home } from "lucide-react";
 import Dropzone from "@/components/ui/Dropzone";
 import TimelineViewer, { ParsedLogItem } from "@/components/ui/TimelineViewer";
-import { generate16CharKey, encryptPayload } from "@/lib/crypto/webcrypto";
+import { generate16CharKey, encryptPayload, wrapKey } from "@/lib/crypto/webcrypto";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -66,10 +66,9 @@ export default function StudentSubmitPage() {
   
   // Crypto State
   const [decryptionKey, setDecryptionKey] = useState<string>('');
-  const [encryptedData, setEncryptedData] = useState<{ ciphertext: string, iv: string } | null>(null);
+  const [encryptedData, setEncryptedData] = useState<{ ciphertext: string, iv: string, wrappedKeyBase64: string } | null>(null);
   
   // Step 3 State
-  const [hasCopiedKey, setHasCopiedKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFilesSelected = async (files: File[]) => {
@@ -128,7 +127,14 @@ export default function StudentSubmitPage() {
       setDecryptionKey(newKey);
       
       const encrypted = await encryptPayload(payload, newKey);
-      setEncryptedData({ ciphertext: encrypted.ciphertextBase64, iv: encrypted.ivBase64 });
+      
+      const wrappedKey = await wrapKey(newKey, 'sit.ac.in');
+      
+      setEncryptedData({ 
+        ciphertext: encrypted.ciphertextBase64, 
+        iv: encrypted.ivBase64,
+        wrappedKeyBase64: wrappedKey
+      });
       
       setCurrentStep(3);
     } catch (err) {
@@ -311,46 +317,17 @@ export default function StudentSubmitPage() {
                   <Lock className="w-8 h-8" />
                 </div>
                 
-                <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-3">Zero-Knowledge Encryption Key</h2>
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-3">Envelope Encryption Locked</h2>
                 <p className="text-sm text-slate-500 leading-relaxed font-medium max-w-lg mb-8">
-                  Your evidence has been encrypted locally. Below is the decryption key. You must provide this key to the ICC / HR personnel through a secure channel so they can review your case.
+                  Your evidence has been encrypted locally using a 256-bit AES key. The key has been securely wrapped using the HR department's public identifier. No manual key transfer is required.
                 </p>
 
-                <div className="w-full max-w-md mb-6 relative group">
-                  <div className="bg-slate-100 border border-slate-200 p-4 rounded text-center text-xl tracking-widest font-mono text-slate-800 font-bold flex justify-between items-center">
-                    <span>{decryptionKey || "GENERATING..."}</span>
-                    <button 
-                      onClick={copyToClipboard}
-                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="w-full max-w-md p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 text-left mb-8 shadow-sm">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wide leading-relaxed">
-                    CRITICAL: To initiate the ICC investigation, you must securely hand over this exact key to the HR office. You can do this in person or via your secure college email to icc-head@sit.ac.in referencing your Case ID.
+                <div className="w-full max-w-md p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3 text-left mb-8 shadow-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide leading-relaxed">
+                    READY FOR VAULT: Your case is ready to be securely transmitted. The ICC / HR personnel will automatically unwrap the key to review your case.
                   </p>
                 </div>
-
-                <label className="flex items-center gap-3 cursor-pointer group mb-10 text-left w-full max-w-md">
-                  <div className="relative flex items-center justify-center">
-                    <input 
-                      type="checkbox" 
-                      className="peer sr-only"
-                      checked={hasCopiedKey}
-                      onChange={(e) => setHasCopiedKey(e.target.checked)}
-                    />
-                    <div className="w-6 h-6 border-2 border-slate-300 rounded peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
-                    <CheckCircle2 className="absolute w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
-                    I have securely copied my decryption key.
-                  </span>
-                </label>
 
                 <button 
                   onClick={async () => {
@@ -361,6 +338,7 @@ export default function StudentSubmitPage() {
                         'anonymous',
                         encryptedData.ciphertext,
                         encryptedData.iv,
+                        encryptedData.wrappedKeyBase64,
                         'sit.ac.in'
                       );
                       setCurrentStep(4);
@@ -371,7 +349,7 @@ export default function StudentSubmitPage() {
                       setIsSaving(false);
                     }
                   }}
-                  disabled={!hasCopiedKey || isSaving}
+                  disabled={isSaving}
                   className="w-full max-w-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   <Lock className="w-5 h-5" />

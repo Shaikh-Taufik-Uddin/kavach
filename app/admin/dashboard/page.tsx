@@ -19,7 +19,7 @@ import LegalReportViewer, { POSHLegalReport } from '../../../components/ui/Legal
 import TimelineViewer, { ParsedLogItem } from '../../../components/ui/TimelineViewer';
 import { generatePOSHReport } from '../../../lib/ai/posh-analyzer';
 import { fetchAllVaultLogs } from '../../../lib/firebase/db';
-import { decryptPayload } from '../../../lib/crypto/webcrypto';
+import { decryptPayload, unwrapKey } from '../../../lib/crypto/webcrypto';
 
 // --- DUMMY DATA ---
 // DUMMY_CASES removed for final integration.
@@ -107,18 +107,9 @@ export default function AdminDashboardPage() {
     fetchCases();
   }, []);
 
-  const handleReviewCaseClick = (caseId: string) => {
-    setSelectedCaseId(caseId);
-    setIsUnlockModalOpen(true);
-  };
-
-  const handleDecryptSubmit = async (key: string) => {
+  const performDecryptionAndAnalysis = async (selectedCase: FirestoreVaultDocument, key: string) => {
     setIsDecrypting(true);
-    
     try {
-      const selectedCase = cases.find(c => c.caseId === selectedCaseId);
-      if (!selectedCase) throw new Error("Case not found");
-
       const decryptedPayload = await decryptPayload(
         selectedCase.encryptedCiphertextBase64,
         selectedCase.initializationVectorBase64,
@@ -149,9 +140,41 @@ export default function AdminDashboardPage() {
     } catch (err) {
       console.error("Decryption/Analysis Error:", err);
       alert("Decryption failed. Please ensure you have the exact 16-character key.");
+      throw err;
     } finally {
       setIsDecrypting(false);
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleReviewCaseClick = async (caseId: string) => {
+    setSelectedCaseId(caseId);
+    
+    const selectedCase = cases.find(c => c.caseId === caseId);
+    if (selectedCase?.wrappedKeyBase64) {
+      setIsDecrypting(true);
+      try {
+        const unwrappedKey = await unwrapKey(selectedCase.wrappedKeyBase64, selectedCase.tenantId || 'sit.ac.in');
+        await performDecryptionAndAnalysis(selectedCase, unwrappedKey);
+      } catch (err) {
+        console.error("Auto-unwrap failed, falling back to manual:", err);
+        alert("Auto-unwrap failed! Error: " + (err as Error).message);
+        setIsDecrypting(false);
+        setIsUnlockModalOpen(true);
+      }
+    } else {
+      alert("This case does not have an envelope key (legacy). Manual decryption required. Please create a new case to test envelope encryption.");
+      setIsUnlockModalOpen(true);
+    }
+  };
+
+  const handleDecryptSubmit = async (key: string) => {
+    try {
+      const selectedCase = cases.find(c => c.caseId === selectedCaseId);
+      if (!selectedCase) throw new Error("Case not found");
+      await performDecryptionAndAnalysis(selectedCase, key);
+    } catch (err) {
+      // Error handled inside performDecryptionAndAnalysis
     }
   };
 
@@ -313,7 +336,8 @@ export default function AdminDashboardPage() {
               <AdminDashboardTable 
                 cases={cases} 
                 isLoading={isLoadingCases} 
-                onReviewCaseClick={handleReviewCaseClick} 
+                onReviewCaseClick={handleReviewCaseClick}
+                processingCaseId={(isDecrypting || isAnalyzing) ? selectedCaseId : null}
               />
             </>
           ) : (

@@ -10,17 +10,19 @@ export interface FirestoreVaultDocument {
   createdAtServerTimestamp: number;
   encryptedCiphertextBase64: string;
   initializationVectorBase64: string;
+  wrappedKeyBase64?: string;
 }
 
 interface AdminDashboardTableProps {
   cases: FirestoreVaultDocument[];
   onReviewCaseClick: (caseId: string) => void;
   isLoading: boolean;
+  processingCaseId?: string | null;
 }
 
 type TabStatus = 'ALL' | 'LOCKED' | 'UNDER_REVIEW' | 'RESOLVED';
 
-export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoading }: AdminDashboardTableProps) {
+export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoading, processingCaseId }: AdminDashboardTableProps) {
   const [activeTab, setActiveTab] = useState<TabStatus>('ALL');
 
   const filteredCases = cases.filter(c => activeTab === 'ALL' || c.status === activeTab);
@@ -124,16 +126,34 @@ export default function AdminDashboardTable({ cases, onReviewCaseClick, isLoadin
                       {isLocked ? (
                         <button 
                           onClick={() => onReviewCaseClick(c.caseId)}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md shadow-sm transition-colors"
+                          disabled={processingCaseId === c.caseId}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md shadow-sm transition-colors disabled:opacity-75 disabled:cursor-wait"
                         >
-                          Unlock & Review <ChevronRight className="w-3.5 h-3.5" />
+                          {processingCaseId === c.caseId ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Unlocking...
+                            </>
+                          ) : (
+                            <>
+                              Unlock & Review <ChevronRight className="w-3.5 h-3.5" />
+                            </>
+                          )}
                         </button>
                       ) : (
                         <button 
                           onClick={() => onReviewCaseClick(c.caseId)}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded shadow-sm transition-colors"
+                          disabled={processingCaseId === c.caseId}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded shadow-sm transition-colors disabled:opacity-75 disabled:cursor-wait"
                         >
-                          View Case <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          {processingCaseId === c.caseId ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-400" /> Loading...
+                            </>
+                          ) : (
+                            <>
+                              View Case <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                            </>
+                          )}
                         </button>
                       )}
                     </td>

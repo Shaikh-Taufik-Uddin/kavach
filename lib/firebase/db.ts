@@ -1,7 +1,7 @@
 import { db } from './config';
 import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
 
-export const saveEncryptedLog = async (userId: string, ciphertextBase64: string, ivBase64: string, tenantId: string = 'sit.ac.in'): Promise<string> => {
+export const saveEncryptedLog = async (userId: string, ciphertextBase64: string, ivBase64: string, wrappedKeyBase64: string, tenantId: string = 'sit.ac.in'): Promise<string> => {
   const vaultRef = doc(collection(db, 'vault'));
   const caseId = vaultRef.id;
   
@@ -14,6 +14,7 @@ export const saveEncryptedLog = async (userId: string, ciphertextBase64: string,
     tenantId,
     ciphertextBase64,
     ivBase64,
+    wrappedKeyBase64,
     createdAt: new Date().toISOString()
   });
   
@@ -21,16 +22,17 @@ export const saveEncryptedLog = async (userId: string, ciphertextBase64: string,
   return caseId;
 };
 
-export const fetchEncryptedLogs = async (userId: string): Promise<{ ciphertextBase64: string, ivBase64: string }[]> => {
+export const fetchEncryptedLogs = async (userId: string): Promise<{ ciphertextBase64: string, ivBase64: string, wrappedKeyBase64?: string }[]> => {
   const q = query(collection(db, 'vault'), where('userId', '==', userId));
   const querySnapshot = await getDocs(q);
   
-  const logs: { ciphertextBase64: string, ivBase64: string }[] = [];
+  const logs: { ciphertextBase64: string, ivBase64: string, wrappedKeyBase64?: string }[] = [];
   querySnapshot.forEach((doc) => {
     const data = doc.data();
     logs.push({
       ciphertextBase64: data.ciphertextBase64,
-      ivBase64: data.ivBase64
+      ivBase64: data.ivBase64,
+      wrappedKeyBase64: data.wrappedKeyBase64
     });
   });
   
@@ -49,6 +51,7 @@ export const fetchAllVaultLogs = async (): Promise<any[]> => {
       createdAtServerTimestamp: new Date(data.createdAt).getTime() || Date.now(),
       encryptedCiphertextBase64: data.ciphertextBase64,
       initializationVectorBase64: data.ivBase64,
+      wrappedKeyBase64: data.wrappedKeyBase64,
     });
   });
   // Sort newest first
