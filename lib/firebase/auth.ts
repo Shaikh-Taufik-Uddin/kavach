@@ -26,7 +26,7 @@ export const logout = async () => {
   }
 };
 
-export const resolveUserRoleAndTenant = (email: string | null): { role: UserRole, tenantId: string | null } => {
+export const resolveUserRoleAndTenant = (email: string | null): { role: UserRole | null, tenantId: string | null } => {
   if (!email) return { role: null, tenantId: null };
 
   const tenantId = email.split('@')[1]?.toLowerCase() || null;

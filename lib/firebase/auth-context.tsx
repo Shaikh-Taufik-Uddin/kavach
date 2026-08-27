@@ -8,7 +8,7 @@ import { UserRole } from '../types';
 
 interface AuthContextType {
   user: User | null;
-  role: UserRole;
+  role: UserRole | null;
   tenantId: string | null;
   loading: boolean;
   login: () => Promise<void>;
@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<UserRole>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 

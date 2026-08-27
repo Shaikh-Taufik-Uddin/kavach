@@ -1,83 +1,82 @@
-import { ParsedLogItem } from '../types';
+// Utility for client-side zero-knowledge encryption using native WebCrypto API
 
-export const deriveKey = async (passcode: string): Promise<CryptoKey> => {
-  const enc = new TextEncoder();
-  const keyMaterial = await window.crypto.subtle.importKey(
+/**
+ * Generates a cryptographically secure, random 16-character alphanumeric string.
+ * Example format: A1B2-C3D4-E5F6-G7H8
+ */
+export function generate16CharKey(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const randomArray = new Uint8Array(16);
+  window.crypto.getRandomValues(randomArray);
+  
+  let key = '';
+  for (let i = 0; i < 16; i++) {
+    key += chars[randomArray[i] % chars.length];
+  }
+  
+  // Format with dashes for readability: XXXX-XXXX-XXXX-XXXX
+  return `${key.slice(0, 4)}-${key.slice(4, 8)}-${key.slice(8, 12)}-${key.slice(12, 16)}`;
+}
+
+/**
+ * Hashes the key string using SHA-256 and imports it as an AES-GCM CryptoKey.
+ */
+export async function deriveCryptoKey(keyString: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  // We hash the raw key string without dashes (or with dashes, as long as it's consistent)
+  const keyData = encoder.encode(keyString.replace(/-/g, ''));
+  
+  // Hash to get 256 bits (32 bytes)
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', keyData);
+  
+  return window.crypto.subtle.importKey(
     'raw',
-    enc.encode(passcode),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-
-  return window.crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: enc.encode('kavach-salt-2026'),
-      iterations: 100000,
-      hash: 'SHA-256'
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
+    hashBuffer,
+    { name: 'AES-GCM' },
     false,
     ['encrypt', 'decrypt']
   );
-};
+}
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
+/**
+ * ArrayBuffer to Base64 string converter
+ */
+function bufferToBase64(buffer: ArrayBuffer): string {
   let binary = '';
   const bytes = new Uint8Array(buffer);
   const len = bytes.byteLength;
   for (let i = 0; i < len; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary);
+  return window.btoa(binary);
 }
 
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binary_string = atob(base64);
-  const len = binary_string.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary_string.charCodeAt(i);
-  }
-  return bytes.buffer;
+export interface EncryptedPayload {
+  ciphertextBase64: string;
+  ivBase64: string;
 }
 
-export const encryptData = async (data: ParsedLogItem[], key: CryptoKey): Promise<{ ciphertextBase64: string, ivBase64: string }> => {
-  const enc = new TextEncoder();
-  const encodedData = enc.encode(JSON.stringify(data));
+/**
+ * Stringifies a JSON payload, generates a random 12-byte IV, and encrypts it using AES-GCM.
+ */
+export async function encryptPayload(payloadJson: object, keyString: string): Promise<EncryptedPayload> {
+  const cryptoKey = await deriveCryptoKey(keyString);
+  
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
-
-  const ciphertextBuffer = await window.crypto.subtle.encrypt(
+  const encoder = new TextEncoder();
+  const encodedPayload = encoder.encode(JSON.stringify(payloadJson));
+  
+  const encryptedBuffer = await window.crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
       iv: iv
     },
-    key,
-    encodedData
+    cryptoKey,
+    encodedPayload
   );
-
+  
   return {
-    ciphertextBase64: arrayBufferToBase64(ciphertextBuffer),
-    ivBase64: arrayBufferToBase64(iv.buffer)
+    ciphertextBase64: bufferToBase64(encryptedBuffer),
+    ivBase64: bufferToBase64(iv.buffer)
   };
-};
-
-export const decryptData = async (ciphertextBase64: string, ivBase64: string, key: CryptoKey): Promise<ParsedLogItem[]> => {
-  const ciphertextBuffer = base64ToArrayBuffer(ciphertextBase64);
-  const ivBuffer = base64ToArrayBuffer(ivBase64);
-
-  const decryptedBuffer = await window.crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: new Uint8Array(ivBuffer)
-    },
-    key,
-    ciphertextBuffer
-  );
-
-  const dec = new TextDecoder();
-  const decodedString = dec.decode(decryptedBuffer);
-  return JSON.parse(decodedString) as ParsedLogItem[];
-};
+}
