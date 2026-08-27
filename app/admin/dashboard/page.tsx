@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   Users, 
@@ -17,34 +17,12 @@ import AdminDashboardTable, { FirestoreVaultDocument } from '../../../components
 import UnlockModal from '../../../components/ui/UnlockModal';
 import LegalReportViewer, { POSHLegalReport } from '../../../components/ui/LegalReportViewer';
 import TimelineViewer, { ParsedLogItem } from '../../../components/ui/TimelineViewer';
+import { generatePOSHReport } from '../../../lib/ai/posh-analyzer';
+import { fetchAllVaultLogs } from '../../../lib/firebase/db';
+import { decryptPayload } from '../../../lib/crypto/webcrypto';
 
 // --- DUMMY DATA ---
-const DUMMY_CASES: FirestoreVaultDocument[] = [
-  {
-    caseId: 'KV-2026-X89',
-    tenantId: 'sit.ac.in',
-    status: 'LOCKED',
-    createdAtServerTimestamp: Date.now() - 1000 * 60 * 60 * 24,
-    encryptedCiphertextBase64: 'U2FsdGVkX1+...',
-    initializationVectorBase64: 'IV...',
-  },
-  {
-    caseId: 'KV-2026-Y42',
-    tenantId: 'sit.ac.in',
-    status: 'LOCKED',
-    createdAtServerTimestamp: Date.now() - 1000 * 60 * 60 * 48,
-    encryptedCiphertextBase64: 'U2FsdGVkX1+...',
-    initializationVectorBase64: 'IV...',
-  },
-  {
-    caseId: 'KV-2026-A11',
-    tenantId: 'sit.ac.in',
-    status: 'UNDER_REVIEW',
-    createdAtServerTimestamp: Date.now() - 1000 * 60 * 60 * 72,
-    encryptedCiphertextBase64: 'U2FsdGVkX1+...',
-    initializationVectorBase64: 'IV...',
-  },
-];
+// DUMMY_CASES removed for final integration.
 
 const DUMMY_TIMELINE: ParsedLogItem[] = [
   {
@@ -108,20 +86,73 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<'REPORT' | 'TIMELINE'>('REPORT');
   
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [reportData, setReportData] = useState<POSHLegalReport | null>(null);
+  
+  const [cases, setCases] = useState<FirestoreVaultDocument[]>([]);
+  const [isLoadingCases, setIsLoadingCases] = useState(true);
+  const [decryptedTimeline, setDecryptedTimeline] = useState<ParsedLogItem[]>([]);
+
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const data = await fetchAllVaultLogs();
+        setCases(data);
+      } catch (err) {
+        console.error("Failed to fetch cases:", err);
+      } finally {
+        setIsLoadingCases(false);
+      }
+    };
+    fetchCases();
+  }, []);
 
   const handleReviewCaseClick = (caseId: string) => {
     setSelectedCaseId(caseId);
     setIsUnlockModalOpen(true);
   };
 
-  const handleDecryptSubmit = (key: string) => {
+  const handleDecryptSubmit = async (key: string) => {
     setIsDecrypting(true);
-    setTimeout(() => {
-      setIsDecrypting(false);
+    
+    try {
+      const selectedCase = cases.find(c => c.caseId === selectedCaseId);
+      if (!selectedCase) throw new Error("Case not found");
+
+      const decryptedPayload = await decryptPayload(
+        selectedCase.encryptedCiphertextBase64,
+        selectedCase.initializationVectorBase64,
+        key
+      );
+      
+      const timeline = decryptedPayload.timeline || [];
+      setDecryptedTimeline(timeline);
+      
+      setIsAnalyzing(true);
+      const report = await generatePOSHReport(timeline);
+      
+      const finalReport = {
+        ...report,
+        tenantDomain: selectedCase.tenantId || 'sit.ac.in',
+        cryptographicIntegrityHash: 'Verified by AES-GCM (Local)',
+        generatedAtISO: new Date().toISOString(),
+        dateRangeStart: timeline[0]?.dateTimeISO || new Date().toISOString(),
+        dateRangeEnd: timeline[timeline.length - 1]?.dateTimeISO || new Date().toISOString(),
+        totalEvidenceCount: timeline.length,
+        chronologicalTimeline: timeline 
+      };
+      
+      setReportData(finalReport);
       setIsUnlockModalOpen(false);
       setViewState('CASE_DETAIL');
       setActiveTab('REPORT');
-    }, 1500);
+    } catch (err) {
+      console.error("Decryption/Analysis Error:", err);
+      alert("Decryption failed. Please ensure you have the exact 16-character key.");
+    } finally {
+      setIsDecrypting(false);
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -280,8 +311,8 @@ export default function AdminDashboardPage() {
 
               {/* TABLE */}
               <AdminDashboardTable 
-                cases={DUMMY_CASES} 
-                isLoading={false} 
+                cases={cases} 
+                isLoading={isLoadingCases} 
                 onReviewCaseClick={handleReviewCaseClick} 
               />
             </>
@@ -337,12 +368,12 @@ export default function AdminDashboardPage() {
                 {activeTab === 'REPORT' ? (
                   <div className="bg-white shadow-2xl max-w-5xl mx-auto rounded-sm border border-slate-300">
                     <LegalReportViewer 
-                      report={{...DUMMY_REPORT, reportId: selectedCaseId || DUMMY_REPORT.reportId}} 
+                      report={reportData ? { ...reportData, reportId: selectedCaseId || reportData.reportId } : { ...DUMMY_REPORT, reportId: selectedCaseId || DUMMY_REPORT.reportId }} 
                     />
                   </div>
                 ) : (
                   <div className="bg-slate-900 rounded-2xl p-6 md:p-8">
-                    <TimelineViewer items={DUMMY_TIMELINE} />
+                    <TimelineViewer items={decryptedTimeline.length > 0 ? decryptedTimeline : DUMMY_TIMELINE} />
                   </div>
                 )}
               </div>

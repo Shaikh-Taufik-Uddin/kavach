@@ -51,6 +51,18 @@ function bufferToBase64(buffer: ArrayBuffer): string {
   return window.btoa(binary);
 }
 
+/**
+ * Base64 string to ArrayBuffer converter
+ */
+function base64ToBuffer(base64: string): ArrayBuffer {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 export interface EncryptedPayload {
   ciphertextBase64: string;
   ivBase64: string;
@@ -79,4 +91,31 @@ export async function encryptPayload(payloadJson: object, keyString: string): Pr
     ciphertextBase64: bufferToBase64(encryptedBuffer),
     ivBase64: bufferToBase64(iv.buffer)
   };
+}
+
+/**
+ * Decrypts an AES-GCM encrypted payload using the provided key string and initialization vector.
+ */
+export async function decryptPayload(ciphertextBase64: string, ivBase64: string, keyString: string): Promise<any> {
+  const cryptoKey = await deriveCryptoKey(keyString);
+  
+  const ivBuffer = base64ToBuffer(ivBase64);
+  const ciphertextBuffer = base64ToBuffer(ciphertextBase64);
+  
+  try {
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: new Uint8Array(ivBuffer)
+      },
+      cryptoKey,
+      ciphertextBuffer
+    );
+    
+    const decoder = new TextDecoder();
+    const decryptedJsonString = decoder.decode(decryptedBuffer);
+    return JSON.parse(decryptedJsonString);
+  } catch (error) {
+    throw new Error("Decryption failed. Incorrect key or corrupted data.");
+  }
 }

@@ -8,6 +8,10 @@ import { generate16CharKey, encryptPayload } from "@/lib/crypto/webcrypto";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
+import { extractTextFromScreenshot } from "@/lib/ai/gemini-vision";
+import { parseWhatsAppText } from "@/lib/utils/whatsapp-parser";
+import { mergeAndSortLogs } from "@/lib/utils/fusion-engine";
+import { saveEncryptedLog } from "@/lib/firebase/db";
 
 const STEPS = [
   { id: 1, label: "Upload Evidence",  icon: FileText, desc: "Select your files" },
@@ -66,40 +70,54 @@ export default function StudentSubmitPage() {
   
   // Step 3 State
   const [hasCopiedKey, setHasCopiedKey] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleFilesSelected = async (files: File[]) => {
     setIsProcessing(true);
     setProcessingProgress(30);
     
     try {
-      const formData = new FormData();
-      formData.append("incidentDescription", incidentDescription);
-      files.forEach((f) => formData.append("files", f));
+      let whatsappLogs: ParsedLogItem[] = [];
+      let ocrLogs: ParsedLogItem[] = [];
+
+      for (const f of files) {
+        if (f.name.endsWith(".txt")) {
+          const text = await f.text();
+          const parsed = parseWhatsAppText(text);
+          whatsappLogs = [...whatsappLogs, ...parsed];
+        } else if (f.type.startsWith("image/")) {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(f);
+          });
+          const parsed = await extractTextFromScreenshot(base64, f.type);
+          ocrLogs = [...ocrLogs, ...parsed];
+        }
+      }
       
       setProcessingProgress(60);
-
-      const res = await fetch('/api/analyze-evidence', {
-        method: 'POST',
-        body: formData
-      });
       
-      const data = await res.json();
+      const mergedTimeline = mergeAndSortLogs(whatsappLogs, ocrLogs);
+      
+      const uniqueTimeline = Array.from(
+        new Map(
+          (mergedTimeline || []).map(item => [item.messageContent + item.timestamp, item])
+        ).values()
+      );
       
       setProcessingProgress(100);
       
-      if (data.success) {
-        setAiTimeline(data.timeline || []);
-        setAiReport(data.report || null);
-        setCurrentStep(2);
-      } else {
-        console.error("API returned error:", data.error);
-        alert("Failed to analyze evidence: " + data.error);
-      }
+      setAiTimeline(uniqueTimeline);
+      setAiReport(null);
+      setCurrentStep(2);
     } catch (err) {
-      console.error("Fetch error:", err);
-      alert("Failed to process evidence. Please check your connection.");
+      console.error("Local parsing error:", err);
+      alert("Failed to process evidence. Please check your files and try again.");
     } finally {
       setIsProcessing(false);
+      setProcessingProgress(0);
     }
   };
 
@@ -335,12 +353,29 @@ export default function StudentSubmitPage() {
                 </label>
 
                 <button 
-                  onClick={() => setCurrentStep(4)}
-                  disabled={!hasCopiedKey}
+                  onClick={async () => {
+                    if (!encryptedData) return;
+                    setIsSaving(true);
+                    try {
+                      await saveEncryptedLog(
+                        'anonymous',
+                        encryptedData.ciphertext,
+                        encryptedData.iv,
+                        'sit.ac.in'
+                      );
+                      setCurrentStep(4);
+                    } catch (err) {
+                      console.error("Vault upload failed:", err);
+                      alert("Failed to submit to vault. Please check your internet connection.");
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  disabled={!hasCopiedKey || isSaving}
                   className="w-full max-w-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   <Lock className="w-5 h-5" />
-                  Encrypt & Submit to Vault
+                  {isSaving ? 'Uploading to Vault...' : 'Encrypt & Submit to Vault'}
                 </button>
               </div>
             </div>

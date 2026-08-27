@@ -33,7 +33,7 @@ Important Rules:
   const logsString = JSON.stringify(decryptedLogs, null, 2);
 
   const apiTimeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("Gemini API timed out after 20 seconds")), 20000)
+    setTimeout(() => reject(new Error("Gemini API timed out after 30 seconds")), 30000)
   );
 
   try {

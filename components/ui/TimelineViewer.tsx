@@ -36,13 +36,13 @@ export default function TimelineViewer({ items, onItemClick }: TimelineViewerPro
       <div className="absolute left-6 top-4 bottom-4 w-px bg-white/10" />
       
       <div className="flex flex-col gap-6">
-        {sortedItems.map((item) => {
+        {sortedItems.map((item, index) => {
           const isWhatsApp = item.sourceType === 'WHATSAPP_TXT';
           const isFlagged = item.flaggedHarassmentTerm;
           
           return (
             <div 
-              key={item.id} 
+              key={`${item.id}-${index}`} 
               className={twMerge(
                 clsx(
                   "relative flex gap-6 group",
@@ -79,10 +79,12 @@ export default function TimelineViewer({ items, onItemClick }: TimelineViewerPro
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-white tracking-wide">{item.sender}</span>
                     <span className="text-xs text-white/40 font-mono">
-                      {new Date(item.dateTimeISO).toLocaleString(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short'
-                      })}
+                      {(item.dateTimeISO || item.timestamp) 
+                        ? new Date(item.dateTimeISO || item.timestamp).toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          })
+                        : 'Unknown Date'}
                     </span>
                   </div>
                   
@@ -104,7 +106,7 @@ export default function TimelineViewer({ items, onItemClick }: TimelineViewerPro
                 </div>
 
                 <p className="text-sm text-white/80 leading-relaxed font-light whitespace-pre-wrap">
-                  {item.messageContent}
+                  {item.messageContent || (item as any).text || (item as any).message || '[No text extracted]'}
                 </p>
 
                 {isFlagged && (
