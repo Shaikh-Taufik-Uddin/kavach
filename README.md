@@ -83,7 +83,7 @@ Students generate **zero-knowledge proofs** of their credentials. Employers veri
     ┌───▼──────┐      ┌──────▼────┐      ┌──────▼──────┐
     │  Crypto  │      │ Firebase  │      │    AI       │
     │  Engine  │      │  Backend  │      │   Engine    │
-    │(WebCrypto)       │           │      │ (Gemini)    │
+    │(WebCrypto)      │           │      │ (Gemini)    │
     └──────────┘      └───────────┘      └─────────────┘
 ```
 
